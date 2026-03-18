@@ -31,6 +31,8 @@ func newTestApp(t *testing.T) *app {
 }
 
 func TestHandleConfig(t *testing.T) {
+	t.Setenv("DEEPSEEK_API_KEY", "test-key")
+
 	server := httptest.NewServer(newMux(newTestApp(t)))
 	defer server.Close()
 
@@ -49,8 +51,16 @@ func TestHandleConfig(t *testing.T) {
 		t.Fatalf("decode json: %v", err)
 	}
 
-	if payload["model"] != defaultModel {
-		t.Fatalf("model = %v, want %s", payload["model"], defaultModel)
+	if configured, ok := payload["configured"].(bool); !ok || !configured {
+		t.Fatalf("configured = %v, want %v", payload["configured"], true)
+	}
+
+	if _, ok := payload["model"]; ok {
+		t.Fatalf("config should not expose model")
+	}
+
+	if _, ok := payload["base_url"]; ok {
+		t.Fatalf("config should not expose base_url")
 	}
 }
 
@@ -75,6 +85,31 @@ func TestServeIndexHTML(t *testing.T) {
 
 	if !strings.Contains(string(body), "高明表达训练场") {
 		t.Fatalf("index.html does not contain app title")
+	}
+}
+
+func TestStaticDoesNotServeSensitiveFiles(t *testing.T) {
+	server := httptest.NewServer(newMux(newTestApp(t)))
+	defer server.Close()
+
+	resp, err := http.Get(server.URL + "/main.go")
+	if err != nil {
+		t.Fatalf("get /main.go: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusNotFound)
+	}
+
+	resp, err = http.Get(server.URL + "/.env.example")
+	if err != nil {
+		t.Fatalf("get /.env.example: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusNotFound)
 	}
 }
 

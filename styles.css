@@ -16,10 +16,10 @@
   --danger-soft: rgba(139, 52, 42, 0.08);
   --shadow-shell: 0 24px 52px rgba(60, 40, 16, 0.12);
   --shadow-card: 0 14px 30px rgba(50, 31, 9, 0.08);
-  --radius-xl: 32px;
-  --radius-lg: 24px;
-  --radius-md: 18px;
-  --radius-sm: 14px;
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
   --max-width: 1200px;
   --transition-fast: 180ms ease;
   --transition-base: 260ms ease;
@@ -280,7 +280,7 @@ button[disabled] {
 }
 
 .workspace {
-  min-height: calc(100dvh - 190px);
+  min-height: calc(100dvh - 50px);
 }
 
 .stage-shell {
@@ -332,6 +332,43 @@ button[disabled] {
 .lead {
   color: var(--ink-soft);
   max-width: 38rem;
+}
+
+.screen-intro {
+  align-content: center;
+  padding: 20px;
+}
+
+.screen-intro .screen-grid {
+  gap: 0;
+}
+
+.screen-intro .surface-card {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.screen-intro .brand-lead,
+.screen-intro .lead {
+  max-width: 42rem;
+}
+
+.screen-intro .metric-row {
+  margin-top: 2px;
+}
+
+.screen-intro .button-row {
+  gap: 12px;
+}
+
+.screen-intro .button-row > button {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 260px;
+  min-height: 52px;
+  justify-content: center;
+  padding: 0 20px;
 }
 
 .screen-grid,
@@ -872,6 +909,10 @@ textarea {
     padding-top: 24px;
   }
 
+  .workspace {
+    min-height: calc(100dvh - 56px);
+  }
+
   .topbar {
     grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.9fr);
     align-items: start;
@@ -880,6 +921,15 @@ textarea {
 
   .screen {
     padding: 28px;
+  }
+
+  .screen-intro {
+    padding: 28px;
+  }
+
+  .screen-intro .surface-card {
+    gap: 20px;
+    padding: 30px;
   }
 
   .screen-grid {
@@ -900,12 +950,6 @@ textarea {
 
   .score-hero {
     grid-template-columns: 160px minmax(0, 1fr);
-  }
-}
-
-@media (min-width: 1024px) {
-  .screen {
-    min-height: calc(100dvh - 214px);
   }
 }
 

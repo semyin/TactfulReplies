@@ -16,6 +16,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -78,13 +79,19 @@ type upstreamResponse struct {
 type scoreSessionResponse struct {
 	Feedback map[string]any `json:"feedback"`
 	Usage    map[string]any `json:"usage"`
-	Model    string         `json:"model"`
 }
 
 func main() {
 	host := flag.String("host", defaultHost, "监听地址，默认 127.0.0.1")
 	port := flag.Int("port", defaultPort, "监听端口，默认 8000")
 	flag.Parse()
+
+	portFlagSet := false
+	flag.CommandLine.Visit(func(flagItem *flag.Flag) {
+		if flagItem.Name == "port" {
+			portFlagSet = true
+		}
+	})
 
 	root, err := os.Getwd()
 	if err != nil {
@@ -93,6 +100,17 @@ func main() {
 
 	if err := loadDotEnv(filepath.Join(root, ".env")); err != nil {
 		log.Fatalf("读取 .env 失败: %v", err)
+	}
+
+	if !portFlagSet {
+		portValue := strings.TrimSpace(os.Getenv("PORT"))
+		if portValue != "" {
+			parsedPort, err := strconv.Atoi(portValue)
+			if err != nil || parsedPort <= 0 || parsedPort > 65535 {
+				log.Fatalf("无效 PORT: %q", portValue)
+			}
+			*port = parsedPort
+		}
 	}
 
 	serverApp := &app{
@@ -112,8 +130,6 @@ func main() {
 func (a *app) handleConfig(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"configured": os.Getenv("DEEPSEEK_API_KEY") != "",
-		"model":      a.model,
-		"base_url":   a.baseURL,
 	})
 }
 
@@ -128,7 +144,7 @@ func (a *app) handleScoreSession(w http.ResponseWriter, r *http.Request) {
 	apiKey := os.Getenv("DEEPSEEK_API_KEY")
 	if apiKey == "" {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{
-			"error": "缺少 DEEPSEEK_API_KEY，暂时无法使用 AI 评分。",
+			"error": "评分服务未配置 API Key，暂时无法使用 AI 评分。",
 		})
 		return
 	}
@@ -152,15 +168,19 @@ func (a *app) handleScoreSession(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		status := http.StatusInternalServerError
 		var upstreamErr *upstreamHTTPError
+		clientMessage := "评分服务暂时不可用，请稍后重试。"
 		switch {
 		case errors.As(err, &upstreamErr):
 			status = http.StatusBadGateway
+			clientMessage = "评分服务暂时不可用（上游错误），请稍后重试。"
 		case errors.Is(err, context.DeadlineExceeded):
 			status = http.StatusGatewayTimeout
+			clientMessage = "评分服务响应超时，请稍后重试。"
 		}
 
+		log.Printf("score-session failed: %v", err)
 		writeJSON(w, status, map[string]any{
-			"error": err.Error(),
+			"error": clientMessage,
 		})
 		return
 	}
@@ -179,6 +199,18 @@ func (a *app) handleStatic(w http.ResponseWriter, r *http.Request) {
 	relativePath := "index.html"
 	if cleaned := path.Clean("/" + r.URL.Path); cleaned != "/" {
 		relativePath = strings.TrimPrefix(cleaned, "/")
+	}
+
+	if strings.HasPrefix(relativePath, ".") || strings.Contains(relativePath, "/.") {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "Not found"})
+		return
+	}
+
+	switch strings.ToLower(filepath.Ext(relativePath)) {
+	case ".html", ".css", ".js":
+	default:
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "Not found"})
+		return
 	}
 
 	targetPath := filepath.Join(a.root, filepath.FromSlash(relativePath))
@@ -336,7 +368,6 @@ func (a *app) requestDeepSeekScore(
 	return scoreSessionResponse{
 		Feedback: feedback,
 		Usage:    upstream.Usage,
-		Model:    a.model,
 	}, nil
 }
 

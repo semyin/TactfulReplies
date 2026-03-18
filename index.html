@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="高明表达训练场：单题切换、渐进式练习、DeepSeek 总评。"
+      content="高明表达训练场：单题切换、渐进式练习、AI 总评。"
     />
     <title>高明表达训练场</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -18,35 +18,6 @@
   </head>
   <body>
     <div class="app-shell">
-      <header class="topbar">
-        <div class="brand-block">
-          <p class="eyebrow">单屏渐进式表达训练</p>
-          <h1>高明表达训练场</h1>
-          <p class="brand-lead">
-            每次只练一题。先说一句，再看参考表达，最后把整轮答题交给
-            DeepSeek 做总评。
-          </p>
-        </div>
-
-        <div class="topbar-side">
-          <p class="status-pill is-pending" id="ai-status-pill">正在检查 DeepSeek 评分状态</p>
-          <nav class="quick-nav" aria-label="页面切换">
-            <button type="button" class="nav-chip" data-screen-target="intro">
-              场景式表达训练
-            </button>
-            <button type="button" class="nav-chip" data-screen-target="guide">
-              用法说明
-            </button>
-            <button type="button" class="nav-chip" data-screen-target="setup">
-              选择沟通目的和难度
-            </button>
-            <button type="button" class="nav-chip" data-screen-target="feedback">
-              AI反馈
-            </button>
-          </nav>
-        </div>
-      </header>
-
       <main class="workspace">
         <section class="stage-shell" aria-live="polite">
           <div class="stage" id="stage"></div>

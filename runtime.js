@@ -6,7 +6,7 @@ const difficultyOptions = [
 ];
 
 const screenLabels = {
-  intro: "场景式表达训练",
+  intro: "训练首页",
   guide: "用法说明",
   setup: "选择沟通目的和难度",
   practice: "开始答题",
@@ -43,8 +43,6 @@ const state = {
     loadingConfig: true,
     serverReachable: false,
     configured: false,
-    model: "deepseek-chat",
-    baseUrl: "https://api.deepseek.com",
     scoring: false,
     error: "",
   },
@@ -107,8 +105,6 @@ async function syncAiConfig() {
     const data = await response.json();
     state.ai.serverReachable = true;
     state.ai.configured = Boolean(data.configured);
-    state.ai.model = data.model || "deepseek-chat";
-    state.ai.baseUrl = data.base_url || "https://api.deepseek.com";
     state.ai.error = "";
   } catch (error) {
     state.ai.serverReachable = false;
@@ -325,14 +321,14 @@ async function startSessionScoring() {
 
   if (!state.ai.serverReachable) {
     state.ai.error =
-      "当前没有连到本地评分服务。请用 `go run .` 启动本地服务后，再使用 DeepSeek 总评。";
+      "当前没有连到本地评分服务。请用 `go run .` 启动本地服务后，再使用 AI 总评。";
     renderStage(false);
     return;
   }
 
   if (!state.ai.configured) {
     state.ai.error =
-      "本地服务已启动，但还没有配置 `DEEPSEEK_API_KEY`，暂时不能调用 DeepSeek 打分。";
+      "本地服务已启动，但还没有配置 API Key，暂时不能使用 AI 评分。";
     renderStage(false);
     return;
   }
@@ -352,7 +348,7 @@ async function startSessionScoring() {
     saveObject(storageKeys.feedbackHistory, state.feedbackHistory);
     pulseFeedback();
   } catch (error) {
-    state.ai.error = error.message || "DeepSeek 评分失败，请稍后重试。";
+    state.ai.error = error.message || "AI 评分失败，请稍后重试。";
   } finally {
     state.ai.scoring = false;
     renderStage(false);
@@ -523,10 +519,13 @@ function renderChrome() {
 
 function renderAiStatusPill() {
   const pill = elements.aiStatusPill;
+  if (!pill) {
+    return;
+  }
   pill.classList.remove("is-ready", "is-error", "is-pending");
 
   if (state.ai.loadingConfig) {
-    pill.textContent = "正在检查 DeepSeek 评分状态";
+    pill.textContent = "正在检查评分服务状态";
     pill.classList.add("is-pending");
     return;
   }
@@ -538,12 +537,12 @@ function renderAiStatusPill() {
   }
 
   if (!state.ai.configured) {
-    pill.textContent = "DeepSeek 服务已连通，API Key 未配置";
+    pill.textContent = "评分服务已连通，API Key 未配置";
     pill.classList.add("is-pending");
     return;
   }
 
-  pill.textContent = `DeepSeek 已连接 · ${state.ai.model}`;
+  pill.textContent = "评分服务已连接";
   pill.classList.add("is-ready");
 }
 
@@ -623,12 +622,12 @@ function renderIntroScreen() {
     <section class="screen screen-intro">
       <div class="screen-grid">
         <div class="surface-card">
-          <p class="eyebrow">场景式表达训练</p>
-          <h2>从“说不清楚”开始，练到“听得懂、愿意听、能推进”</h2>
-          <p class="lead">
-            这次不再把 200 道题一次性摊开。你会按单题流转去练，每次只面对一个场景，
-            写完一句，再决定要不要看参考表达。
+          <p class="eyebrow">渐进式表达训练</p>
+          <h1>高明表达训练场</h1>
+          <p class="brand-lead">
+            每次只练一题。先说一句，再看参考表达，最后把整轮答题交给 AI 做总评。
           </p>
+          <p class="lead">从“说不清楚”开始，练到“听得懂、愿意听、能推进”。</p>
           <div class="metric-row">
             <article class="metric-card">
               <span class="metric-value">${scenarios.length}</span>
@@ -644,25 +643,14 @@ function renderIntroScreen() {
             </article>
           </div>
           <div class="button-row">
-            <button type="button" class="primary-button" data-action="go-screen" data-target="guide">
-              继续，先看用法说明
+            <button type="button" class="primary-button" data-action="go-screen" data-target="setup">
+              开始：选择沟通目的和难度
             </button>
-            <button type="button" class="ghost-button" data-action="go-screen" data-target="setup">
-              直接去选题
+            <button type="button" class="ghost-button" data-action="go-screen" data-target="guide">
+              查看用法说明
             </button>
           </div>
         </div>
-
-        <aside class="surface-card">
-          <p class="panel-label">这一版有什么变化</p>
-          <ol class="bullet-list">
-            <li>一屏只显示一个页面状态，不再长滚动找题。</li>
-            <li>答题区一次只显示一题，并支持上一题、下一题。</li>
-            <li>参考表达默认隐藏，必须先写再看。</li>
-            <li>每次“你先说一句”都会被记录进本地历史。</li>
-            <li>整轮答题结束后，可以交给 DeepSeek 做总评。</li>
-          </ol>
-        </aside>
       </div>
     </section>
   `;
@@ -707,7 +695,7 @@ function renderGuideScreen() {
           </ol>
         </article>
         <article class="surface-card">
-          <p class="panel-label">DeepSeek 总评怎么用</p>
+          <p class="panel-label">AI 总评怎么用</p>
           <ol class="bullet-list">
             <li>AI 总评默认只看你本轮已记录的题目。</li>
             <li>每题以最近一次保存的表达作为评分版本。</li>
@@ -718,7 +706,7 @@ function renderGuideScreen() {
 
       <div class="button-row">
         <button type="button" class="ghost-button" data-action="go-screen" data-target="intro">
-          返回场景式表达训练
+          返回训练首页
         </button>
         <button type="button" class="primary-button" data-action="go-screen" data-target="setup">
           继续，去选沟通目的和难度
@@ -824,7 +812,7 @@ function renderSetupScreen() {
           <p class="panel-label">AI 评分状态</p>
           <p class="helper-note ${aiHint.className}">${escapeHtml(aiHint.text)}</p>
           <p class="storage-note">
-            系统会自动记录你每次“你先说一句”的内容。DeepSeek 总评默认读取每题最近一次保存的版本。
+            系统会自动记录你每次“你先说一句”的内容。AI 总评默认读取每题最近一次保存的版本。
           </p>
         </aside>
       </div>
@@ -916,7 +904,7 @@ function renderPracticeScreen() {
         </label>
 
         <p class="attempt-note">
-          本题已记录 ${currentHistory.length} 次表达。DeepSeek 总评默认取最近一次保存的版本。
+          本题已记录 ${currentHistory.length} 次表达。AI 总评默认取最近一次保存的版本。
         </p>
         ${inlineMessage}
 
@@ -971,7 +959,7 @@ function renderPracticeScreen() {
 
       <div class="return-row">
         <button type="button" class="text-button" data-action="go-screen" data-target="intro">
-          返回场景式表达训练
+          返回训练首页
         </button>
         <button type="button" class="text-button" data-action="go-screen" data-target="guide">
           返回用法说明
@@ -996,7 +984,7 @@ function renderFeedbackScreen() {
       <section class="screen">
         <article class="feedback-card loading-block">
           <p class="panel-label">AI 正在评分</p>
-          <h2>DeepSeek 正在看你这轮的表达</h2>
+          <h2>AI 正在看你这轮的表达</h2>
           <p class="lead">
             系统会按“清晰度、抓重点、分寸感、说服力、层次感”几个维度做总评，并给出鼓励和改写方向。
           </p>
@@ -1019,8 +1007,8 @@ function renderFeedbackScreen() {
               state.ai.error
                 ? escapeHtml(state.ai.error)
                 : answeredCount
-                ? "你已经有可评分的答案了，现在可以点击按钮生成 DeepSeek 总评。"
-                : "DeepSeek 总评会读取你本轮已经记录的题目和最近一次表达版本。"
+                ? "你已经有可评分的答案了，现在可以点击按钮生成 AI 总评。"
+                : "AI 总评会读取你本轮已经记录的题目和最近一次表达版本。"
             }
           </p>
           <div class="button-row">
@@ -1115,7 +1103,7 @@ function renderFeedbackScreen() {
 
           ${
             state.session.feedbackUsage
-              ? `<p class="helper-note">本次评分模型：${escapeHtml(state.ai.model)} · 输入 tokens ${state.session.feedbackUsage.prompt_tokens || 0}，输出 tokens ${state.session.feedbackUsage.completion_tokens || 0}</p>`
+              ? `<p class="helper-note">本次评分输入 tokens ${state.session.feedbackUsage.prompt_tokens || 0}，输出 tokens ${state.session.feedbackUsage.completion_tokens || 0}</p>`
               : ""
           }
         </article>
@@ -1166,20 +1154,20 @@ function getAiSetupHint() {
   if (!state.ai.serverReachable) {
     return {
       className: "is-error",
-      text: "当前是纯静态页面模式。要启用 DeepSeek 评分，请运行 `go run .` 后再从本地地址打开页面。",
+      text: "当前是纯静态页面模式。要启用 AI 评分，请运行 `go run .` 后再从本地地址打开页面。",
     };
   }
 
   if (!state.ai.configured) {
     return {
       className: "is-error",
-      text: "评分服务已启动，但没有检测到 `DEEPSEEK_API_KEY`。配置环境变量并重启服务后即可使用总评。",
+      text: "评分服务已启动，但 API Key 未配置。配置环境变量并重启服务后即可使用总评。",
     };
   }
 
   return {
     className: "is-ready",
-    text: `DeepSeek 已连接，当前模型：${state.ai.model}。`,
+    text: "评分服务已连接，可以使用 AI 总评。",
   };
 }
 
