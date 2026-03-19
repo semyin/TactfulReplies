@@ -358,17 +358,26 @@ button[disabled] {
   margin-top: 2px;
 }
 
-.screen-intro .button-row {
+.screen-intro .button-row,
+.screen-guide .button-row,
+.screen-setup .button-row,
+.screen-feedback .button-row {
   gap: 12px;
 }
 
-.screen-intro .button-row > button {
+.screen-intro .button-row > button,
+.screen-guide .button-row > button,
+.screen-setup .button-row > button,
+.screen-feedback .button-row > button,
+.screen-practice .question-actions > button,
+.screen-practice .return-row > button {
   display: inline-flex;
   align-items: center;
   flex: 1 1 260px;
   min-height: 52px;
   justify-content: center;
   padding: 0 20px;
+  text-align: center;
 }
 
 .screen-grid,
@@ -468,6 +477,60 @@ button[disabled] {
 .principle-card {
   background:
     linear-gradient(140deg, rgba(255, 255, 255, 0.85), rgba(250, 245, 237, 0.92));
+}
+
+.principle-card-merged,
+.principle-flow,
+.principle-copy {
+  display: grid;
+}
+
+.principle-card-merged {
+  gap: 14px;
+}
+
+.principle-flow {
+  gap: 14px;
+}
+
+.principle-step {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.principle-step + .principle-step {
+  padding-top: 14px;
+  border-top: 1px solid rgba(75, 56, 34, 0.1);
+}
+
+.principle-step .principle-index {
+  margin-bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 42px;
+  padding: 0 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(198, 138, 74, 0.28);
+  background: linear-gradient(180deg, rgba(246, 228, 202, 0.9), rgba(255, 248, 238, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 8px 18px rgba(198, 138, 74, 0.12);
+  color: #9a5a1d;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+}
+
+.principle-copy {
+  gap: 6px;
+}
+
+.principle-copy h3,
+.principle-copy .helper-note {
+  margin: 0;
 }
 
 .principle-index {
@@ -682,7 +745,7 @@ textarea {
 .question-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
 }
 
 .answer-panel {
@@ -725,6 +788,7 @@ textarea {
 
 .return-row {
   padding-top: 6px;
+  gap: 12px;
 }
 
 .empty-card {

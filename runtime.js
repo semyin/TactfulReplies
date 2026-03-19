@@ -30,8 +30,8 @@ const scenarioMap = new Map(scenarios.map((item) => [item.id, item]));
 const state = {
   screen: "intro",
   setup: {
-    category: "all",
-    difficulty: "all",
+    category: "",
+    difficulty: "",
   },
   drafts: loadObjectWithFallback(storageKeys.drafts, legacyStorageKeys.drafts),
   attempts: normalizeAttemptHistory(loadObject(storageKeys.attempts)),
@@ -44,6 +44,8 @@ const state = {
     serverReachable: false,
     configured: false,
     scoring: false,
+    scoringRunId: "",
+    scoringSessionId: "",
     error: "",
   },
   session: createEmptySession(),
@@ -210,6 +212,16 @@ function handleStageChange(event) {
 }
 
 function startSession() {
+  if (!state.setup.category || !state.setup.difficulty) {
+    state.inlineMessage = {
+      sceneId: "__setup__",
+      type: "error",
+      text: "请先选择沟通目的和难度，再开始答题。",
+    };
+    renderStage(false);
+    return;
+  }
+
   const matchedScenes = getSetupScenes();
 
   if (!matchedScenes.length) {
@@ -311,6 +323,8 @@ async function startSessionScoring() {
   state.session.feedback = null;
   state.session.feedbackUsage = null;
   state.ai.scoring = false;
+  state.ai.scoringRunId = "";
+  state.ai.scoringSessionId = "";
   goToScreen("feedback");
 
   if (!answeredScenes.length) {
@@ -333,25 +347,48 @@ async function startSessionScoring() {
     return;
   }
 
+  const scoringRunId = createId();
+  const scoringSessionId = state.session.id;
   state.ai.scoring = true;
+  state.ai.scoringRunId = scoringRunId;
+  state.ai.scoringSessionId = scoringSessionId;
   renderStage(false);
 
   try {
     const response = await requestSessionScore(answeredScenes);
-    state.session.feedback = normalizeFeedback(response.feedback, answeredScenes.length);
-    state.session.feedbackUsage = response.usage || null;
-    state.feedbackHistory[state.session.id] = {
+    const feedback = normalizeFeedback(response.feedback, answeredScenes.length);
+    const feedbackUsage = response.usage || null;
+
+    if (state.ai.scoringRunId !== scoringRunId) {
+      return;
+    }
+
+    state.feedbackHistory[scoringSessionId] = {
       createdAt: new Date().toISOString(),
-      feedback: state.session.feedback,
+      feedback,
       answeredCount: answeredScenes.length,
     };
     saveObject(storageKeys.feedbackHistory, state.feedbackHistory);
+
+    if (state.session.id === scoringSessionId) {
+      state.session.feedback = feedback;
+      state.session.feedbackUsage = feedbackUsage;
+    }
+
     pulseFeedback();
   } catch (error) {
+    if (state.ai.scoringRunId !== scoringRunId) {
+      return;
+    }
+
     state.ai.error = error.message || "AI 评分失败，请稍后重试。";
   } finally {
-    state.ai.scoring = false;
-    renderStage(false);
+    if (state.ai.scoringRunId === scoringRunId) {
+      state.ai.scoring = false;
+      state.ai.scoringRunId = "";
+      state.ai.scoringSessionId = "";
+      renderStage(false);
+    }
   }
 }
 
@@ -385,6 +422,10 @@ async function requestSessionScore(answeredScenes) {
 }
 
 function getSetupScenes() {
+  if (!state.setup.category || !state.setup.difficulty) {
+    return [];
+  }
+
   return scenarios.filter((item) => {
     if (state.setup.category !== "all" && item.category !== state.setup.category) {
       return false;
@@ -445,12 +486,18 @@ function getAnsweredCountInSession() {
 }
 
 function getSelectedCategoryLabel() {
-  return state.setup.category === "all"
-    ? "全部沟通目的"
-    : categoryMap.get(state.setup.category);
+  if (!state.setup.category) {
+    return "未选择";
+  }
+
+  return state.setup.category === "all" ? "全部沟通目的" : categoryMap.get(state.setup.category);
 }
 
 function getSelectedDifficultyLabel() {
+  if (!state.setup.difficulty) {
+    return "未选择";
+  }
+
   return state.setup.difficulty === "all" ? "全部难度" : state.setup.difficulty;
 }
 
@@ -667,23 +714,32 @@ function renderGuideScreen() {
         </p>
       </div>
 
-      <div class="triple-grid">
-        <article class="principle-card">
-          <p class="principle-index">01</p>
-          <h3>先把目标说出来</h3>
-          <p class="helper-note">你这句话要解决什么，先让对方知道，别把重点埋在铺垫里。</p>
-        </article>
-        <article class="principle-card">
-          <p class="principle-index">02</p>
-          <h3>再补关键事实</h3>
-          <p class="helper-note">事实够支撑判断就行，不要把解释写成流水账。</p>
-        </article>
-        <article class="principle-card">
-          <p class="principle-index">03</p>
-          <h3>最后留出台阶</h3>
-          <p class="helper-note">说清立场不等于说死关系，留余地才更像高手。</p>
-        </article>
-      </div>
+      <article class="principle-card principle-card-merged">
+        <p class="panel-label">三步顺序</p>
+        <div class="principle-flow">
+          <div class="principle-step">
+            <p class="principle-index">01</p>
+            <div class="principle-copy">
+              <h3>先把目标说出来</h3>
+              <p class="helper-note">你这句话要解决什么，先让对方知道，别把重点埋在铺垫里。</p>
+            </div>
+          </div>
+          <div class="principle-step">
+            <p class="principle-index">02</p>
+            <div class="principle-copy">
+              <h3>再补关键事实</h3>
+              <p class="helper-note">事实够支撑判断就行，不要把解释写成流水账。</p>
+            </div>
+          </div>
+          <div class="principle-step">
+            <p class="principle-index">03</p>
+            <div class="principle-copy">
+              <h3>最后留出台阶</h3>
+              <p class="helper-note">说清立场不等于说死关系，留余地才更像高手。</p>
+            </div>
+          </div>
+        </div>
+      </article>
 
       <div class="dual-grid">
         <article class="surface-card">
@@ -705,11 +761,11 @@ function renderGuideScreen() {
       </div>
 
       <div class="button-row">
-        <button type="button" class="ghost-button" data-action="go-screen" data-target="intro">
-          返回训练首页
-        </button>
         <button type="button" class="primary-button" data-action="go-screen" data-target="setup">
-          继续，去选沟通目的和难度
+          立即开始
+        </button>
+        <button type="button" class="ghost-button" data-action="go-screen" data-target="intro">
+          返回首页
         </button>
       </div>
     </section>
@@ -719,6 +775,7 @@ function renderGuideScreen() {
 function renderSetupScreen() {
   const matchedScenes = getSetupScenes();
   const sampleScenes = matchedScenes.slice(0, 3);
+  const isSetupReady = Boolean(state.setup.category && state.setup.difficulty);
   const setupMessage =
     state.inlineMessage && state.inlineMessage.sceneId === "__setup__"
       ? `<p class="inline-message">${escapeHtml(state.inlineMessage.text)}</p>`
@@ -740,6 +797,7 @@ function renderSetupScreen() {
           <label class="field">
             <span>沟通目的</span>
             <select data-field="category" aria-label="沟通目的">
+              <option value="" ${state.setup.category ? "" : "selected"} disabled>请选择沟通目的</option>
               ${categories
                 .map(
                   (item) => `
@@ -755,6 +813,7 @@ function renderSetupScreen() {
           <label class="field">
             <span>难度</span>
             <select data-field="difficulty" aria-label="难度">
+              <option value="" ${state.setup.difficulty ? "" : "selected"} disabled>请选择难度</option>
               ${difficultyOptions
                 .map(
                   (item) => `
@@ -768,24 +827,27 @@ function renderSetupScreen() {
           </label>
 
           <p class="setup-summary">
-            当前组合：<strong>${escapeHtml(getSelectedCategoryLabel())}</strong> ·
+            ${
+              isSetupReady
+                ? `当前组合：<strong>${escapeHtml(getSelectedCategoryLabel())}</strong> ·
             <strong>${escapeHtml(getSelectedDifficultyLabel())}</strong><br />
-            本轮将包含 <strong>${matchedScenes.length}</strong> 道题。
+            本轮将包含 <strong>${matchedScenes.length}</strong> 道题。`
+                : `请先选择 <strong>沟通目的</strong> 和 <strong>难度</strong>，选完后再开始答题。`
+            }
           </p>
 
           ${setupMessage}
 
           <div class="button-row">
-            <button type="button" class="ghost-button" data-action="go-screen" data-target="guide">
-              返回用法说明
-            </button>
             <button
               type="button"
               class="primary-button"
               data-action="start-session"
-              ${matchedScenes.length ? "" : "disabled"}
             >
-              继续，开始答题
+              开始答题
+            </button>
+            <button type="button" class="ghost-button" data-action="go-screen" data-target="guide">
+              返回用法说明
             </button>
           </div>
         </section>
@@ -794,7 +856,9 @@ function renderSetupScreen() {
           <p class="panel-label">这一轮题目预览</p>
           <div class="sample-list">
             ${
-              sampleScenes.length
+              !isSetupReady
+                ? `<article class="sample-item">请先选择沟通目的和难度，预览会在这里显示。</article>`
+                : sampleScenes.length
                 ? sampleScenes
                     .map(
                       (item) => `
@@ -958,17 +1022,17 @@ function renderPracticeScreen() {
       </article>
 
       <div class="return-row">
-        <button type="button" class="text-button" data-action="go-screen" data-target="intro">
-          返回训练首页
-        </button>
-        <button type="button" class="text-button" data-action="go-screen" data-target="guide">
-          返回用法说明
-        </button>
-        <button type="button" class="text-button" data-action="go-screen" data-target="setup">
-          返回选择沟通目的和难度
-        </button>
         <button type="button" class="primary-button" data-action="score-session">
           结束本轮并 AI 评分
+        </button>
+        <button type="button" class="ghost-button" data-action="go-screen" data-target="setup">
+          返回选题
+        </button>
+        <button type="button" class="ghost-button" data-action="go-screen" data-target="guide">
+          返回用法说明
+        </button>
+        <button type="button" class="ghost-button" data-action="go-screen" data-target="intro">
+          返回首页
         </button>
       </div>
     </section>
@@ -981,7 +1045,7 @@ function renderFeedbackScreen() {
 
   if (state.ai.scoring) {
     return `
-      <section class="screen">
+      <section class="screen screen-feedback">
         <article class="feedback-card loading-block">
           <p class="panel-label">AI 正在评分</p>
           <h2>AI 正在看你这轮的表达</h2>
@@ -991,6 +1055,14 @@ function renderFeedbackScreen() {
           <div class="loading-dots" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
+          <div class="button-row">
+            <button type="button" class="primary-button" disabled>
+              AI 正在评分中
+            </button>
+            <button type="button" class="ghost-button" data-action="go-screen" data-target="practice">
+              返回答题
+            </button>
+          </div>
         </article>
       </section>
     `;
@@ -998,7 +1070,7 @@ function renderFeedbackScreen() {
 
   if (!feedback) {
     return `
-      <section class="screen">
+      <section class="screen screen-feedback">
         <article class="empty-card">
           <p class="panel-label">AI反馈</p>
           <h2>${answeredCount ? "还没生成这轮总评" : "先去答题，再回来拿总评"}</h2>
@@ -1132,14 +1204,14 @@ function renderFeedbackScreen() {
       </article>
 
       <div class="button-row">
+        <button type="button" class="primary-button" data-action="restart-session">
+          开始新一轮
+        </button>
         <button type="button" class="ghost-button" data-action="go-screen" data-target="practice">
-          返回答题继续练
+          返回答题
         </button>
         <button type="button" class="ghost-button" data-action="go-screen" data-target="setup">
-          重新选择题组
-        </button>
-        <button type="button" class="primary-button" data-action="restart-session">
-          开始新一轮训练
+          重新选题
         </button>
       </div>
     </section>
