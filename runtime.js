@@ -152,10 +152,6 @@ function handleStageClick(event) {
     case "go-next-question":
       moveQuestion(1);
       break;
-    case "save-answer":
-      persistCurrentAttempt("manual");
-      renderStage(false);
-      break;
     case "toggle-answer":
       toggleAnswerPanel();
       break;

@@ -786,13 +786,6 @@ textarea {
   white-space: nowrap;
 }
 
-.progress-side-note {
-  color: var(--ink-soft);
-  font-size: 0.84rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .question-card {
   display: grid;
   gap: 20px;
@@ -1564,18 +1557,6 @@ textarea {
     min-height: 0;
     gap: 8px;
     padding: 0;
-  }
-
-  .screen-practice .tag-row {
-    flex-wrap: nowrap;
-    overflow: hidden;
-    padding-bottom: 0;
-  }
-
-  .screen-practice .tag {
-    flex: 0 0 auto;
-    min-height: 30px;
-    font-size: 0.76rem;
   }
 
   .screen-practice .question-head h3 {
