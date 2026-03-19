@@ -259,8 +259,11 @@ function moveQuestion(direction) {
     return;
   }
 
-  if (direction > 0) {
-    persistCurrentAttempt("next", { requireText: false, announce: false });
+  if (direction !== 0) {
+    persistCurrentAttempt(direction > 0 ? "next" : "prev", {
+      requireText: false,
+      announce: false,
+    });
   }
 
   const nextIndex = clamp(
@@ -664,6 +667,23 @@ function getScreenMarkup() {
   }
 }
 
+function renderHomeIconButton(className = "") {
+  return `
+    <button
+      type="button"
+      class="icon-button ${className}"
+      data-action="go-screen"
+      data-target="intro"
+      aria-label="返回首页"
+      title="返回首页"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4.75 10.5 12 4.75l7.25 5.75v8a.75.75 0 0 1-.75.75h-4.5v-5.25h-4v5.25H5.5a.75.75 0 0 1-.75-.75v-8Z" />
+      </svg>
+    </button>
+  `;
+}
+
 function renderIntroScreen() {
   return `
     <section class="screen screen-intro">
@@ -838,7 +858,7 @@ function renderSetupScreen() {
 
           ${setupMessage}
 
-          <div class="button-row">
+          <div class="button-row feedback-actions">
             <button
               type="button"
               class="primary-button"
@@ -912,6 +932,7 @@ function renderPracticeScreen() {
     ((state.session.currentIndex + 1) / sessionScenes.length) * 100
   );
   const answerVisible = state.revealed.has(currentScene.id);
+  const isLastQuestion = state.session.currentIndex === sessionScenes.length - 1;
   const inlineMessage =
     state.inlineMessage && state.inlineMessage.sceneId === currentScene.id
       ? `<p class="inline-message">${escapeHtml(state.inlineMessage.text)}</p>`
@@ -919,38 +940,41 @@ function renderPracticeScreen() {
 
   return `
     <section class="screen screen-practice">
-      <div class="screen-head">
-        <p class="eyebrow">开始答题</p>
-        <h2>第 ${state.session.currentIndex + 1} / ${sessionScenes.length} 题</h2>
-        <div class="progress-stack">
-          <div class="progress-meta">
-            <span>已记录 ${answeredCount} 题</span>
-            <span>${progressPercent}%</span>
+      <div class="practice-toolbar">
+        <div class="practice-progress-block">
+          <p class="eyebrow">开始答题</p>
+          <div class="practice-progress-head">
+            <h2>第 ${state.session.currentIndex + 1} / ${sessionScenes.length} 题</h2>
+            <p class="practice-progress-side">
+              <span class="progress-context">${escapeHtml(categoryMap.get(currentScene.category))} ${escapeHtml(
+                currentScene.difficulty
+              )}</span>
+              <span class="progress-sep" aria-hidden="true">|</span>
+              <span class="progress-recorded">已记录${answeredCount}题</span>
+            </p>
           </div>
-          <div class="progress-bar"><span style="width: ${progressPercent}%"></span></div>
+          <div class="progress-stack">
+            <div class="progress-meta">
+              <span></span>
+              <span>${progressPercent}%</span>
+            </div>
+            <div class="progress-bar"><span style="width: ${progressPercent}%"></span></div>
+          </div>
         </div>
+        ${renderHomeIconButton("screen-home-button")}
       </div>
 
       <article class="question-card">
         <div class="question-head">
-          <div class="tag-row">
-            <span class="tag is-category">${escapeHtml(categoryMap.get(currentScene.category))}</span>
-            <span class="tag ${getDifficultyClass(currentScene.difficulty)}">${escapeHtml(
-              currentScene.difficulty
-            )}</span>
-            <span class="tag">本轮：${escapeHtml(getSelectedCategoryLabel())} / ${escapeHtml(
-              getSelectedDifficultyLabel()
-            )}</span>
-          </div>
           <h3>${escapeHtml(currentScene.title)}</h3>
         </div>
 
-        <div class="prompt-grid">
-          <dl class="prompt-card">
+        <div class="prompt-stack">
+          <dl class="prompt-card prompt-card-emphasis">
             <dt>场景背景</dt>
             <dd>${escapeHtml(currentScene.context)}</dd>
           </dl>
-          <dl class="prompt-card">
+          <dl class="prompt-card prompt-card-emphasis is-goal">
             <dt>你的目标</dt>
             <dd>${escapeHtml(currentScene.goal)}</dd>
           </dl>
@@ -961,18 +985,18 @@ function renderPracticeScreen() {
           <textarea
             class="scene-draft"
             data-scene-id="${currentScene.id}"
-            rows="5"
+            rows="4"
             maxlength="240"
             placeholder="先写下你会怎么开口。别急着漂亮，先把意思说准。"
           >${escapeHtml(currentDraft)}</textarea>
         </label>
 
         <p class="attempt-note">
-          本题已记录 ${currentHistory.length} 次表达。AI 总评默认取最近一次保存的版本。
+          本题已记录 ${currentHistory.length} 次表达。切到下一题或开始评分时会自动保存。
         </p>
         ${inlineMessage}
 
-        <div class="question-actions">
+        <div class="question-actions question-actions-main">
           <button
             type="button"
             class="ghost-button"
@@ -981,60 +1005,74 @@ function renderPracticeScreen() {
           >
             上一题
           </button>
-          <button type="button" class="ghost-button" data-action="save-answer">
-            记录本次表达
-          </button>
           <button type="button" class="secondary-button" data-action="toggle-answer">
-            ${answerVisible ? "收起参考表达" : "查看参考表达"}
+            ${answerVisible ? "收起参考" : "查看参考"}
           </button>
           <button
             type="button"
             class="primary-button"
             data-action="go-next-question"
-            ${state.session.currentIndex === sessionScenes.length - 1 ? "disabled" : ""}
+            ${isLastQuestion ? "disabled" : ""}
           >
-            ${state.session.currentIndex === sessionScenes.length - 1 ? "已到最后一题" : "记录并下一题"}
+            下一题
           </button>
         </div>
 
-        ${
-          answerVisible
-            ? `
-              <section class="answer-panel">
-                <div class="answer-block is-low">
-                  <p class="answer-label">低分说法</p>
-                  <p class="answer-text">${escapeHtml(currentScene.badExample)}</p>
-                </div>
-                <div class="answer-block is-high">
-                  <p class="answer-label">推荐说法</p>
-                  <p class="answer-text">${escapeHtml(currentScene.goodExample)}</p>
-                </div>
-                <div class="tips-block">
-                  <p class="answer-label">拆解要点</p>
-                  <ul class="tips-list">
-                    ${currentScene.tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join("")}
-                  </ul>
-                </div>
-              </section>
-            `
-            : ""
-        }
+        <div class="question-actions question-actions-footer">
+          <button type="button" class="primary-button question-score-button" data-action="score-session">
+            结束本轮并 AI 评分
+          </button>
+        </div>
       </article>
 
-      <div class="return-row">
-        <button type="button" class="primary-button" data-action="score-session">
-          结束本轮并 AI 评分
-        </button>
-        <button type="button" class="ghost-button" data-action="go-screen" data-target="setup">
-          返回选题
-        </button>
-        <button type="button" class="ghost-button" data-action="go-screen" data-target="guide">
-          返回用法说明
-        </button>
-        <button type="button" class="ghost-button" data-action="go-screen" data-target="intro">
-          返回首页
-        </button>
-      </div>
+      ${
+        answerVisible
+          ? `
+            <div class="reference-overlay">
+              <button
+                type="button"
+                class="reference-backdrop"
+                data-action="toggle-answer"
+                aria-label="关闭参考"
+              ></button>
+              <section class="reference-sheet" role="dialog" aria-modal="true" aria-label="参考表达">
+                <div class="reference-sheet-head">
+                  <div>
+                    <p class="panel-label">参考表达</p>
+                    <h3>${escapeHtml(currentScene.title)}</h3>
+                  </div>
+                  <button type="button" class="text-button reference-close-button" data-action="toggle-answer">
+                    关闭
+                  </button>
+                </div>
+
+                <section class="answer-panel">
+                  <div class="answer-block is-high">
+                    <p class="answer-label">推荐说法</p>
+                    <p class="answer-text">${escapeHtml(currentScene.goodExample)}</p>
+                  </div>
+                  <details class="answer-details">
+                    <summary>看看拆解要点</summary>
+                    <div class="tips-block">
+                      <p class="answer-label">拆解要点</p>
+                      <ul class="tips-list">
+                        ${currentScene.tips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join("")}
+                      </ul>
+                    </div>
+                  </details>
+                  <details class="answer-details">
+                    <summary>看看低分误区</summary>
+                    <div class="answer-block is-low">
+                      <p class="answer-label">低分说法</p>
+                      <p class="answer-text">${escapeHtml(currentScene.badExample)}</p>
+                    </div>
+                  </details>
+                </section>
+              </section>
+            </div>
+          `
+          : ""
+      }
     </section>
   `;
 }
@@ -1046,6 +1084,14 @@ function renderFeedbackScreen() {
   if (state.ai.scoring) {
     return `
       <section class="screen screen-feedback">
+        <div class="feedback-toolbar">
+          <div class="screen-head">
+            <p class="eyebrow">AI 评分</p>
+            <h2>AI 正在看你这一轮的表达</h2>
+            <p class="lead">会重点看你是不是说得清楚、够直接、边界稳、还能把对话往前推进。</p>
+          </div>
+          ${renderHomeIconButton("screen-home-button")}
+        </div>
         <article class="feedback-card loading-block">
           <p class="panel-label">AI 正在评分</p>
           <h2>AI 正在看你这轮的表达</h2>
@@ -1055,7 +1101,7 @@ function renderFeedbackScreen() {
           <div class="loading-dots" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
-          <div class="button-row">
+          <div class="button-row feedback-actions">
             <button type="button" class="primary-button" disabled>
               AI 正在评分中
             </button>
@@ -1083,7 +1129,7 @@ function renderFeedbackScreen() {
                 : "AI 总评会读取你本轮已经记录的题目和最近一次表达版本。"
             }
           </p>
-          <div class="button-row">
+          <div class="button-row feedback-actions">
             ${
               answeredCount
                 ? `<button type="button" class="primary-button" data-action="score-session">开始 AI 总评</button>`
@@ -1109,106 +1155,121 @@ function renderFeedbackScreen() {
 
   return `
     <section class="screen screen-feedback">
-      <div class="screen-head">
-        <p class="eyebrow">AI反馈</p>
-        <h2>这一轮表达总评已经出来了</h2>
-        <p class="lead">
-          本次总评基于本轮已记录的 ${answeredCount} 道题，读取每题最近一次保存的表达版本。
-        </p>
+      <div class="feedback-toolbar">
+        <div class="screen-head">
+          <p class="eyebrow">AI 反馈</p>
+          <h2>这一轮的表达总评出来了</h2>
+          <p class="lead">
+            本次总评基于本轮已记录的 ${answeredCount} 道题，读取每题最近一次保存的表达版本。
+          </p>
+        </div>
+        ${renderHomeIconButton("screen-home-button")}
       </div>
 
-      <div class="dual-grid">
-        <article class="feedback-card feedback-summary">
-          <div class="score-hero">
-            <div class="score-ring" style="--score-angle: ${scoreAngle}">
-              <div>
-                <strong>${feedback.overall_score}</strong>
-                <span>综合得分</span>
-              </div>
-            </div>
-            <div class="score-copy">
-              <p class="panel-label">${escapeHtml(feedback.level)}</p>
-              <h3>${escapeHtml(feedback.encouragement)}</h3>
-              <p class="helper-note">${escapeHtml(feedback.summary)}</p>
+      <article class="feedback-card feedback-summary feedback-hero-card">
+        <div class="score-hero">
+          <div class="score-ring" style="--score-angle: ${scoreAngle}">
+            <div>
+              <strong>${feedback.overall_score}</strong>
+              <span>综合得分</span>
             </div>
           </div>
+          <div class="score-copy">
+            <p class="panel-label">${escapeHtml(feedback.level)}</p>
+            <h3>${escapeHtml(feedback.encouragement)}</h3>
+            <p class="helper-note">${escapeHtml(feedback.summary)}</p>
+          </div>
+        </div>
 
-          <div class="dimension-list">
-            ${dimensionLabels
+        <div class="badge-row">
+          ${feedback.badges.map((badge) => `<span class="result-badge">${escapeHtml(badge)}</span>`).join("")}
+        </div>
+      </article>
+
+      <div class="feedback-body">
+        <div class="dual-grid feedback-main-grid">
+          <article class="feedback-card feedback-dimensions">
+            <p class="panel-label">五个维度</p>
+            <div class="dimension-list">
+              ${dimensionLabels
+                .map(
+                  ([key, label]) => `
+                    <div class="dimension-item">
+                      <div class="dimension-head">
+                        <span>${label}</span>
+                        <strong>${feedback.dimension_scores[key]}</strong>
+                      </div>
+                      <div class="dimension-track">
+                        <span style="width: ${feedback.dimension_scores[key]}%"></span>
+                      </div>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+          </article>
+
+          <article class="feedback-card feedback-focus-card">
+            <div class="feedback-copy-block">
+              <p class="panel-label">先保住的部分</p>
+              <ul class="feedback-list">
+                ${feedback.strengths.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+              </ul>
+            </div>
+
+            <div class="feedback-copy-block">
+              <p class="panel-label">优先修的点</p>
+              <ul class="feedback-list">
+                ${feedback.improvement_points.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+              </ul>
+            </div>
+
+            <div class="feedback-copy-block">
+              <p class="panel-label">下一轮就练</p>
+              <ul class="feedback-list">
+                ${feedback.next_actions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+              </ul>
+            </div>
+
+            ${
+              state.session.feedbackUsage
+                ? `<p class="helper-note feedback-usage">本次评分输入 tokens ${state.session.feedbackUsage.prompt_tokens || 0}，输出 tokens ${state.session.feedbackUsage.completion_tokens || 0}</p>`
+                : ""
+            }
+          </article>
+        </div>
+
+        <article class="feedback-card feedback-scenes">
+          <div class="feedback-scene-head">
+            <div>
+              <p class="panel-label">代表题目点评</p>
+              <h3>最值得保留和最该重写的表达</h3>
+            </div>
+          </div>
+          <div class="scene-feedback-list">
+            ${feedback.scene_feedback
               .map(
-                ([key, label]) => `
-                  <div class="dimension-item">
-                    <div class="dimension-head">
-                      <span>${label}</span>
-                      <strong>${feedback.dimension_scores[key]}</strong>
+                (item) => `
+                  <article class="scene-feedback-item">
+                    <div class="tag-row">
+                      <span class="tag">${escapeHtml(item.title)}</span>
+                      <span class="tag">${escapeHtml(String(item.score))} 分</span>
+                      <span class="tag">${escapeHtml(item.verdict)}</span>
                     </div>
-                    <div class="dimension-track">
-                      <span style="width: ${feedback.dimension_scores[key]}%"></span>
-                    </div>
-                  </div>
+                    <p><strong>看得见的优点：</strong>${escapeHtml(item.what_worked)}</p>
+                    <p><strong>最该修的一刀：</strong>${escapeHtml(item.what_to_improve)}</p>
+                    <p><strong>更稳的开口参考：</strong>${escapeHtml(item.better_opening)}</p>
+                  </article>
                 `
               )
               .join("")}
           </div>
-
-          <div class="badge-row">
-            ${feedback.badges.map((badge) => `<span class="result-badge">${escapeHtml(badge)}</span>`).join("")}
-          </div>
-        </article>
-
-        <article class="feedback-card">
-          <p class="panel-label">反馈重点</p>
-          <h3>你现在最值得保住和继续加强的部分</h3>
-          <ul class="feedback-list">
-            ${feedback.strengths.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-          </ul>
-
-          <p class="panel-label">接下来优先修的点</p>
-          <ul class="feedback-list">
-            ${feedback.improvement_points.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-          </ul>
-
-          <p class="panel-label">下一轮练习建议</p>
-          <ul class="feedback-list">
-            ${feedback.next_actions.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
-          </ul>
-
-          ${
-            state.session.feedbackUsage
-              ? `<p class="helper-note">本次评分输入 tokens ${state.session.feedbackUsage.prompt_tokens || 0}，输出 tokens ${state.session.feedbackUsage.completion_tokens || 0}</p>`
-              : ""
-          }
         </article>
       </div>
 
-      <article class="feedback-card">
-        <p class="panel-label">代表题目点评</p>
-        <div class="scene-feedback-list">
-          ${feedback.scene_feedback
-            .map(
-              (item) => `
-                <article class="scene-feedback-item">
-                  <div class="tag-row">
-                    <span class="tag">${escapeHtml(item.title)}</span>
-                    <span class="tag">${escapeHtml(String(item.score))} 分</span>
-                    <span class="tag">${escapeHtml(item.verdict)}</span>
-                  </div>
-                  <p><strong>看得见的优点：</strong>${escapeHtml(item.what_worked)}</p>
-                  <p><strong>最该修的一刀：</strong>${escapeHtml(item.what_to_improve)}</p>
-                  <p><strong>更稳的开口参考：</strong>${escapeHtml(item.better_opening)}</p>
-                </article>
-              `
-            )
-            .join("")}
-        </div>
-      </article>
-
-      <div class="button-row">
+      <div class="button-row feedback-actions">
         <button type="button" class="primary-button" data-action="restart-session">
-          开始新一轮
-        </button>
-        <button type="button" class="ghost-button" data-action="go-screen" data-target="practice">
-          返回答题
+          再练一轮
         </button>
         <button type="button" class="ghost-button" data-action="go-screen" data-target="setup">
           重新选题
@@ -1313,7 +1374,7 @@ function normalizeSceneFeedback(items) {
     ];
   }
 
-  return items.slice(0, 8).map((item) => ({
+  return items.slice(0, 3).map((item) => ({
     title: item.title || "代表题目",
     score: clamp(Math.round(Number(item.score) || 0), 0, 100),
     verdict: item.verdict || "继续打磨",
@@ -1423,8 +1484,16 @@ async function safeParseJson(response) {
 }
 
 function autoResizeTextarea(textarea) {
+  const isCompactViewport =
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-width: 767px)").matches;
+  const minHeight = isCompactViewport ? 72 : 152;
+  const maxHeight = isCompactViewport ? 104 : 280;
+
   textarea.style.height = "auto";
-  textarea.style.height = `${Math.max(textarea.scrollHeight, 152)}px`;
+  textarea.style.height = `${Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight)}px`;
+  textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
 }
 
 function normalizeText(value) {
