@@ -11,6 +11,7 @@
   --moss: #55624d;
   --moss-soft: rgba(85, 98, 77, 0.08);
   --amber: #b38327;
+  --amber-dark: #8c5d18;
   --amber-soft: rgba(179, 131, 39, 0.1);
   --blue-soft: rgba(41, 74, 116, 0.08);
   --danger-soft: rgba(141, 61, 43, 0.07);
@@ -21,6 +22,7 @@
   --radius-md: 16px;
   --radius-sm: 12px;
   --max-width: 1320px;
+  --topbar-offset: 46px;
   --transition-fast: 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --transition-base: 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -245,7 +247,7 @@ h3 {
   padding: 0 20px;
   border: 1px solid rgba(24, 19, 17, 0.08);
   border-radius: 16px;
-  background: linear-gradient(180deg, #231c17, #16120f);
+  background: linear-gradient(180deg, var(--ink), color-mix(in srgb, var(--ink) 80%, black));
   color: var(--paper-strong);
   font-size: 0.95rem;
   font-weight: 800;
@@ -276,7 +278,7 @@ button[disabled] {
 }
 
 .workspace {
-  min-height: calc(100dvh - 46px);
+  min-height: calc(100dvh - var(--topbar-offset));
 }
 
 .stage-shell {
@@ -526,7 +528,7 @@ button[disabled] {
   border: 1px solid rgba(179, 131, 39, 0.18);
   background: rgba(239, 230, 214, 0.94);
   box-shadow: none;
-  color: #8c5d18;
+  color: var(--amber-dark);
   font-size: 1rem;
   letter-spacing: 0.12em;
 }
@@ -691,7 +693,7 @@ textarea {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #1f1915, #8d3d2b);
+  background: linear-gradient(90deg, var(--ink), var(--wine));
 }
 
 .icon-button {
@@ -898,7 +900,7 @@ textarea {
 }
 
 .prompt-card-emphasis.is-goal dt {
-  color: #8c5d18;
+  color: var(--amber-dark);
 }
 
 .prompt-card dt {
@@ -917,10 +919,30 @@ textarea {
   gap: 8px;
 }
 
-.draft-area span {
+.draft-area label {
   color: var(--ink-soft);
   font-size: 0.94rem;
   font-weight: 700;
+}
+
+.question-title {
+  font-size: clamp(1.25rem, 2.8vw, 1.75rem);
+  line-height: 1.24;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  letter-spacing: 0.01em;
+}
+
+.reference-title {
+  font-size: 1.02rem;
+  line-height: 1.24;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+}
+
+.feedback-encouragement {
+  font-size: clamp(1.25rem, 2.8vw, 1.75rem);
+  line-height: 1.24;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  color: var(--ink);
 }
 
 .question-actions {
@@ -1099,47 +1121,78 @@ textarea {
 }
 
 .feedback-hero-card {
-  gap: 18px;
+  gap: 20px;
+  padding: 24px;
 }
 
 .score-hero {
   display: grid;
-  gap: 22px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 24px;
   align-items: center;
 }
 
 .score-ring {
   --score-angle: 0deg;
-  display: grid;
-  place-items: center;
-  width: 152px;
-  height: 152px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 140px;
+  height: 140px;
+  margin: 0;
   border-radius: 50%;
   background:
     radial-gradient(circle at center, rgba(251, 249, 244, 1) 56%, transparent 58%),
-    conic-gradient(#1f1915 var(--score-angle), rgba(24, 19, 17, 0.1) 0);
+    conic-gradient(var(--ink) var(--score-angle), rgba(24, 19, 17, 0.1) 0);
   border: 1px solid var(--line);
   box-shadow: 0 16px 28px rgba(24, 19, 17, 0.08);
 }
 
+.score-ring > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
 .score-ring strong {
   display: block;
-  font-size: 2rem;
+  font-size: 2.2rem;
   line-height: 1;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  text-align: center;
 }
 
 .score-ring span {
   display: block;
   margin-top: 4px;
   color: var(--ink-soft);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   text-align: center;
 }
 
 .score-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  align-content: center;
+}
+
+.score-copy .panel-label {
+  color: var(--amber-dark);
+  font-weight: 700;
+}
+
+.feedback-encouragement {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  color: var(--ink);
+}
+
+.score-copy .helper-note {
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .feedback-body,
@@ -1148,11 +1201,12 @@ textarea {
 .feedback-copy-block,
 .feedback-dimensions {
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
 
 .feedback-body {
   min-height: 0;
+  gap: 24px;
 }
 
 .feedback-scene-head {
@@ -1164,23 +1218,34 @@ textarea {
 
 .feedback-usage {
   color: var(--ink-soft);
+  font-size: 0.82rem;
 }
 
 .dimension-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .dimension-item {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .dimension-head {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: 10px;
   font-size: 0.92rem;
+}
+
+.dimension-head span {
+  color: var(--ink);
+}
+
+.dimension-head strong {
+  font-size: 1rem;
+  font-family: "Noto Serif SC", "Songti SC", serif;
 }
 
 .dimension-track {
@@ -1194,40 +1259,44 @@ textarea {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #1f1915, #8d3d2b);
+  background: linear-gradient(90deg, var(--ink), var(--wine));
 }
 
 .feedback-list {
   display: grid;
-  gap: 10px;
-  padding-left: 1.1rem;
+  gap: 8px;
+  padding-left: 1.2rem;
+  margin: 0;
 }
 
 .feedback-list li {
   color: var(--ink-soft);
+  line-height: 1.55;
+  font-size: 0.92rem;
 }
 
 .badge-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
+  padding-top: 4px;
 }
 
 .result-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 38px;
+  min-height: 34px;
   padding: 0 14px;
   border-radius: 999px;
   background: rgba(243, 239, 232, 0.92);
   border: 1px solid var(--line);
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .scene-feedback-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .scene-feedback-item {
@@ -1235,19 +1304,33 @@ textarea {
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.72);
+  display: grid;
+  gap: 12px;
 }
 
-.scene-feedback-item h4 {
-  margin-bottom: 6px;
-  font-size: 1rem;
+.scene-feedback-item .tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
-.scene-feedback-item p + p {
-  margin-top: 8px;
+.scene-feedback-item .tag {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+
+.scene-feedback-item p {
+  margin: 0;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
 }
 
 .scene-feedback-item strong {
   color: var(--ink);
+  font-weight: 600;
 }
 
 .loading-block {
@@ -1292,10 +1375,8 @@ textarea {
 }
 
 @media (max-width: 767px) {
-  html,
-  body {
-    height: 100%;
-    overflow: hidden;
+  html {
+    scroll-behavior: smooth;
   }
 
   body {
@@ -1321,7 +1402,13 @@ textarea {
     gap: 14px;
     padding: 16px;
     border-radius: 24px;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .screen-feedback {
+    height: auto;
+    min-height: 100%;
   }
 
   .screen-head {
@@ -1689,8 +1776,12 @@ textarea {
     font-size: 0.82rem;
   }
 
-  .screen-feedback {
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
+.screen-feedback {
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .screen-feedback .feedback-body {
+    min-height: auto;
   }
 
   .screen-feedback .screen-head > h2 {
@@ -1707,50 +1798,73 @@ textarea {
     gap: 10px;
   }
 
-  .screen-feedback .dual-grid {
+.screen-feedback .dual-grid {
     grid-template-columns: 1fr;
     min-height: 0;
+    gap: 14px;
+  }
+
+  .screen-feedback .feedback-hero-card {
+    padding: 16px;
   }
 
   .screen-feedback .score-hero {
-    grid-template-columns: 96px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
   }
 
   .screen-feedback .score-ring {
-    width: 96px;
-    height: 96px;
+    width: 88px;
+    height: 88px;
   }
 
   .screen-feedback .score-ring strong {
-    font-size: 1.42rem;
+    font-size: 1.5rem;
+  }
+
+  .screen-feedback .score-ring span {
+    font-size: 0.72rem;
+  }
+
+  .screen-feedback .score-copy {
+    align-content: center;
+  }
+
+  .screen-feedback .feedback-encouragement {
+    font-size: 1rem;
   }
 
   .screen-feedback .feedback-card {
-    padding: 12px;
+    padding: 14px;
   }
 
   .screen-feedback .feedback-copy-block {
-    gap: 6px;
+    gap: 8px;
   }
 
   .screen-feedback .dimension-list,
   .screen-feedback .feedback-list {
-    gap: 8px;
+    gap: 10px;
   }
 
   .screen-feedback .scene-feedback-list {
     display: flex;
     gap: 10px;
     overflow-x: auto;
-    padding-bottom: 2px;
+    padding-bottom: 4px;
     scroll-snap-type: x mandatory;
   }
 
   .screen-feedback .scene-feedback-item {
-    min-width: min(288px, 84vw);
-    padding: 12px;
+    min-width: min(280px, 85vw);
+    padding: 14px;
     scroll-snap-align: start;
+    gap: 10px;
+  }
+
+  .screen-feedback .scene-feedback-item p {
+    font-size: 0.88rem;
   }
 }
 
@@ -1851,10 +1965,8 @@ textarea {
 }
 
 @media (min-width: 768px) {
-  html,
-  body {
-    height: 100%;
-    overflow: hidden;
+  html {
+    scroll-behavior: smooth;
   }
 
   .app-shell {
@@ -1884,7 +1996,13 @@ textarea {
     height: 100%;
     min-height: 0;
     padding: 24px;
-    overflow: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .screen-feedback {
+    height: auto;
+    min-height: 100%;
   }
 
   .screen-intro .surface-card {
@@ -2073,18 +2191,20 @@ textarea {
     min-height: 48px;
   }
 
-  .screen-practice .return-row {
+.screen-practice .return-row {
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
     padding-top: 8px;
   }
 
   .screen-feedback {
-    grid-template-rows: auto minmax(220px, auto) minmax(0, 1fr) auto;
+    grid-template-rows: auto auto auto auto;
+    gap: 20px;
   }
 
   .screen-feedback > .dual-grid {
     min-height: 0;
+    gap: 20px;
   }
 
   .screen-feedback > .dual-grid > .feedback-card,
@@ -2095,18 +2215,42 @@ textarea {
   .screen-feedback > .dual-grid > .feedback-card {
     display: grid;
     align-content: start;
-    overflow: auto;
+    overflow: visible;
   }
 
   .screen-feedback > .feedback-card:last-of-type {
     display: grid;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .screen-feedback .scene-feedback-list {
     min-height: 0;
-    overflow: auto;
+    overflow: visible;
     padding-right: 4px;
+  }
+
+  .screen-feedback .feedback-hero-card {
+    padding: 24px;
+  }
+
+  .screen-feedback .feedback-dimensions {
+    padding: 20px;
+  }
+
+  .screen-feedback .feedback-focus-card {
+    padding: 20px;
+  }
+
+  .screen-feedback .feedback-scenes {
+    padding: 20px;
+  }
+
+  .screen-feedback .dimension-list {
+    gap: 12px;
+  }
+
+  .screen-feedback .feedback-list {
+    gap: 8px;
   }
 }
 

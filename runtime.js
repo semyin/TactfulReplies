@@ -61,10 +61,14 @@ const elements = {
 init();
 
 async function init() {
-  bindGlobalEvents();
-  renderChrome();
-  renderStage(false);
-  await syncAiConfig();
+  try {
+    bindGlobalEvents();
+    renderChrome();
+    renderStage(false);
+    await syncAiConfig();
+  } catch (error) {
+    console.error("应用初始化失败:", error);
+  }
 }
 
 function createEmptySession() {
@@ -87,8 +91,19 @@ function bindGlobalEvents() {
   });
 
   elements.stage.addEventListener("click", handleStageClick);
+  elements.stage.addEventListener("keydown", handleStageKeydown);
   elements.stage.addEventListener("input", handleStageInput);
   elements.stage.addEventListener("change", handleStageChange);
+}
+
+function handleStageKeydown(event) {
+  const trigger = event.target.closest("[data-action]");
+  if (!trigger) return;
+
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    trigger.click();
+  }
 }
 
 async function syncAiConfig() {
@@ -596,6 +611,15 @@ function goToScreen(screen) {
   state.screen = screen;
   renderChrome();
   renderStage(true);
+
+  // 焦点管理：移动焦点到主内容区域
+  requestAnimationFrame(() => {
+    const heading = elements.stage.querySelector("h1, h2");
+    if (heading) {
+      heading.setAttribute("tabindex", "-1");
+      heading.focus();
+    }
+  });
 }
 
 function renderStage(withTransition) {
@@ -645,6 +669,43 @@ function syncRenderedControls() {
   if (textarea) {
     autoResizeTextarea(textarea);
   }
+
+  // 设置焦点陷阱
+  const dialog = elements.stage.querySelector('[role="dialog"]');
+  if (dialog) {
+    setupFocusTrap(dialog);
+  }
+}
+
+function setupFocusTrap(dialog) {
+  const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  const focusableElements = dialog.querySelectorAll(focusableSelector);
+  
+  if (!focusableElements.length) return;
+
+  const firstFocusable = focusableElements[0];
+  const lastFocusable = focusableElements[focusableElements.length - 1];
+
+  // 聚焦到第一个可聚焦元素
+  firstFocusable.focus();
+
+  const trapFocus = (event) => {
+    if (event.key !== "Tab") return;
+
+    if (event.shiftKey) {
+      if (document.activeElement === firstFocusable) {
+        event.preventDefault();
+        lastFocusable.focus();
+      }
+    } else {
+      if (document.activeElement === lastFocusable) {
+        event.preventDefault();
+        firstFocusable.focus();
+      }
+    }
+  };
+
+  dialog.addEventListener("keydown", trapFocus);
 }
 
 function getScreenMarkup() {
@@ -960,9 +1021,9 @@ function renderPracticeScreen() {
         ${renderHomeIconButton("screen-home-button")}
       </div>
 
-      <article class="question-card">
+<article class="question-card">
         <div class="question-head">
-          <h3>${escapeHtml(currentScene.title)}</h3>
+          <h2 class="question-title">${escapeHtml(currentScene.title)}</h2>
         </div>
 
         <div class="prompt-stack">
@@ -976,28 +1037,29 @@ function renderPracticeScreen() {
           </dl>
         </div>
 
-        <label class="draft-area">
-          <span>你先说一句</span>
+        <div class="draft-area">
+          <label for="scene-draft-${currentScene.id}">你先说一句</label>
           <textarea
+            id="scene-draft-${currentScene.id}"
             class="scene-draft"
             data-scene-id="${currentScene.id}"
             rows="4"
             maxlength="240"
             placeholder="先写下你会怎么开口。别急着漂亮，先把意思说准。"
           >${escapeHtml(currentDraft)}</textarea>
-        </label>
+        </div>
 
         <p class="attempt-note">
           本题已记录 ${currentHistory.length} 次表达。切到下一题或开始评分时会自动保存。
         </p>
         ${inlineMessage}
 
-        <div class="question-actions question-actions-main">
+<div class="question-actions question-actions-main">
           <button
             type="button"
             class="ghost-button"
             data-action="go-prev-question"
-            ${state.session.currentIndex === 0 ? "disabled" : ""}
+            ${state.session.currentIndex === 0 ? "disabled aria-disabled='true'" : ""}
           >
             上一题
           </button>
@@ -1008,7 +1070,7 @@ function renderPracticeScreen() {
             type="button"
             class="primary-button"
             data-action="go-next-question"
-            ${isLastQuestion ? "disabled" : ""}
+            ${isLastQuestion ? "disabled aria-disabled='true'" : ""}
           >
             下一题
           </button>
@@ -1031,11 +1093,11 @@ function renderPracticeScreen() {
                 data-action="toggle-answer"
                 aria-label="关闭参考"
               ></button>
-              <section class="reference-sheet" role="dialog" aria-modal="true" aria-label="参考表达">
+<section class="reference-sheet" role="dialog" aria-modal="true" aria-label="参考表达">
                 <div class="reference-sheet-head">
                   <div>
                     <p class="panel-label">参考表达</p>
-                    <h3>${escapeHtml(currentScene.title)}</h3>
+                    <h2 class="reference-title">${escapeHtml(currentScene.title)}</h2>
                   </div>
                   <button type="button" class="text-button reference-close-button" data-action="toggle-answer">
                     关闭
@@ -1097,8 +1159,8 @@ function renderFeedbackScreen() {
           <div class="loading-dots" aria-hidden="true">
             <span></span><span></span><span></span>
           </div>
-          <div class="button-row feedback-actions">
-            <button type="button" class="primary-button" disabled>
+<div class="button-row feedback-actions">
+            <button type="button" class="primary-button" disabled aria-disabled="true">
               AI 正在评分中
             </button>
             <button type="button" class="ghost-button" data-action="go-screen" data-target="practice">
@@ -1170,9 +1232,9 @@ function renderFeedbackScreen() {
               <span>综合得分</span>
             </div>
           </div>
-          <div class="score-copy">
+<div class="score-copy">
             <p class="panel-label">${escapeHtml(feedback.level)}</p>
-            <h3>${escapeHtml(feedback.encouragement)}</h3>
+            <p class="feedback-encouragement">${escapeHtml(feedback.encouragement)}</p>
             <p class="helper-note">${escapeHtml(feedback.summary)}</p>
           </div>
         </div>
@@ -1235,11 +1297,11 @@ function renderFeedbackScreen() {
           </article>
         </div>
 
-        <article class="feedback-card feedback-scenes">
+<article class="feedback-card feedback-scenes">
           <div class="feedback-scene-head">
             <div>
               <p class="panel-label">代表题目点评</p>
-              <h3>最值得保留和最该重写的表达</h3>
+              <h2>最值得保留和最该重写的表达</h2>
             </div>
           </div>
           <div class="scene-feedback-list">
